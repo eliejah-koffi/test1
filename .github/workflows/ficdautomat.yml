@@ -1,10 +1,10 @@
 name: Continuous Deployment Pipeline
 
- on:
-   push:
-     branches:
-       - main
-   workflow_dispatch:
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   # Job 1 : Création des fichier d'environement et constuction/push(depot) de l'image django sur docker hub  
