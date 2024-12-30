@@ -1,20 +1,22 @@
-name: Continuous Deployment Pipeline
+name: Continuous Deployment Pipeline       #le nom du workflow
 
-on:     #
-  push:
-    branches:
+on:                                #les événements qui déclencheront le workflow
+  push:                            #le workflow sera exécuté chaque fois qu'un code est poussé vers le dépôt.
+    branches:                       #les branches qui déclencheront le workflow.
       - main
-  workflow_dispatch:
+  workflow_dispatch:                 #
 
 jobs:
   # Job 1 : Création des fichier d'environement et constuction/push(depot) de l'image django sur docker hub  
-  create-depot-env-file-Docker-image:
-    runs-on: ubuntu-latest  #parceque le serveur est sur ubuntu; 
+  create-depot-env-file-Docker-image:                 
+    runs-on: ubuntu-latest  
     steps:
+      # Étape 1 :telechargement le code sur le serveur ubuntu de github action
       - name: Checkout source code
-        uses: actions/checkout@v2      #telecharger le code sur le serveur ubuntu de gitaction
-# env file for django app
-      - name: Create .env.prod file  #le fichier qui contient variables d'environnement que l'app va utiliser
+        uses: actions/checkout@v2                    
+
+      # Étape 2 :creation du fichier qui contient variables d'environnement que l'app django va utiliser
+      - name: Create .env.prod file                 
         run: |
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.prod 
           echo "DEBUG=${{ secrets.DEBUG }}" >> .env.prod
@@ -23,37 +25,43 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env.prod
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env.prod
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env.prod
-# env file for docker compose
-      - name: Create .env file                     #run est une instruction linux qui va nous permettre de 
-        run: |
+
+      # Étape 3 :Creation du fichier qui permettra de gérer plusieurs conteneurs Docker, tels que l'application elle-même et une base de données PostgreSQL 
+      - name: Create .env file                    
+        run: |                                            
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env     
-# envoie des fichier neccesaire pour demarer les conteneur sur le serveur
-      - name: Upload docker-compose.yml and env file in server  #yml va lancer les conteneurs,les env vont fournirs lesidentifiants pour construire et demarrer les conteneurs
-        uses: appleboy/scp-action@master             #instruction qui permet dutiliser les actions gitaction; cet action permet de copier 
+
+
+      # Étape 4 :envoie des fichier neccesaire pour demarer les conteneur sur le serveur
+      - name: Upload docker-compose.yml and env file in server  #yml va lancer les conteneurs,les env vont fournirs les identifiants pour construire et demarrer les conteneurs
+        uses: appleboy/scp-action@master             # permet de copier 
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
-          source: "docker-compose.yml, .env.prod, .env"      #ces fics st sur ubuntu de gitaction
-          target: '/home/ubuntu/victor-memoire'             #copier vers le serveur aws
+          source: "docker-compose.yml, .env.prod, .env"      #copie depuis github action
+          target: '/home/ubuntu/victor-memoire'             #copie vers le serveur aws
 
 
-# copie du fichier .env.prod necessaire pour l'app django dans le repertoire memoire/
+      # Étape 5 :deplacement du fichier .env.prod necessaire pour l'app django dans le repertoire memoire/
       - name: copy env file
-        run: sudo mv .env.prod memoire/   #deplace le fic dans le reper memoire c sur gitaction
-# connection au registry docker hub pour deposer l'image 
+        run: sudo mv .env.prod memoire/                    
+  
+  
+      # Étape 6 :connection au registre docker hub pour deposer l'image
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASS }}
-      # Étape 3 : Construire l'image Docker de l'application
-      - name: Build the Docker image          #le
+
+      # Étape 7 : Construire l'image Docker de l'application
+      - name: Build the Docker image          
         run: docker build -t eliejah426/memoiretest1:latest1 .
 
-      # Étape 5 : Pousser l'image Docker sur Docker Hub
+      # Étape 8 : Pousser l'image Docker sur Docker Hub
       - name: Push Docker image
         run: docker push eliejah426/memoiretest1:latest1
 
@@ -70,10 +78,12 @@ jobs:
     steps:
       # Étape 1 : Connexion SSH pour déployer l'application
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2                       
+         
 
+      # Étape 2 :exécution des commandes SSH à distance dans ce workflows GitHub Actions.
       - name: Deploy the application
-        uses: appleboy/ssh-action@v0.1.6
+        uses: appleboy/ssh-action@v0.1.6                  
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER }}
@@ -81,9 +91,9 @@ jobs:
           port: 22
           script: |
             cd /home/ubuntu/victor-memoire    #deplacer ds ce dossier
-            sudo docker pull eliejah426/memoiretest1:latest1    #telecharger le conteneur de dochub sur aws
-            sudo docker compose -f docker-compose.yml down      #eteindre les conteneur doccompose
-            sudo docker compose -f docker-compose.yml up -d       #rallumer les conteneurs
+            sudo docker pull eliejah426/memoiretest1:latest1             #telecharger le conteneur de dockerhub sur aws
+            sudo docker compose -f docker-compose.yml down               #eteindre les conteneur dockercompose
+            sudo docker compose -f docker-compose.yml up -d               #rallumer les conteneurs
             #sudo rm .env                                    #raisons de securité
             #sudo rm .env.prod
           
