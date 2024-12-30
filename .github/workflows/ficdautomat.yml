@@ -7,7 +7,7 @@ on:                                #les événements qui déclencheront le workf
   workflow_dispatch:                 #
 
 jobs:
-  # Job 1 : Création des fichier d'environement et constuction/push(depot) de l'image django sur docker hub  
+  # Job 1 : Création des fichier d'environement et constuction/push(depot) de l'image docker sur docker hub  
   create-depot-env-file-Docker-image:                 
     runs-on: ubuntu-latest  
     steps:
@@ -26,7 +26,7 @@ jobs:
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env.prod
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env.prod
 
-      # Étape 3 :Creation du fichier qui permettra de gérer plusieurs conteneurs Docker, tels que l'application elle-même et une base de données PostgreSQL 
+      # Étape 3 :Creation du fichier necessaire a docker compose 
       - name: Create .env file                    
         run: |                                            
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
@@ -50,7 +50,7 @@ jobs:
         run: sudo mv .env.prod memoire/                    
   
   
-      # Étape 6 :connection au registre docker hub pour deposer l'image
+      # Étape 6 :connection au registre docker hub 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -61,7 +61,7 @@ jobs:
       - name: Build the Docker image          
         run: docker build -t eliejah426/memoiretest1:latest1 .
 
-      # Étape 8 : Pousser l'image Docker sur Docker Hub
+      # Étape 8 : depot de l'image Docker sur Docker Hub
       - name: Push Docker image
         run: docker push eliejah426/memoiretest1:latest1
 
@@ -69,7 +69,7 @@ jobs:
 
 
 
-  # Job 2 : Déploiement de l'Application sur le Serveur
+  # Job 2 : Déploiement de l'Application sur le Serveur aws
   deploy-application:
     # needs: [push-code]
     needs: [create-depot-env-file-Docker-image]
@@ -94,6 +94,5 @@ jobs:
             sudo docker pull eliejah426/memoiretest1:latest1             #telecharger le conteneur de dockerhub sur aws
             sudo docker compose -f docker-compose.yml down               #eteindre les conteneur dockercompose
             sudo docker compose -f docker-compose.yml up -d               #rallumer les conteneurs
-            #sudo rm .env                                    #raisons de securité
-            #sudo rm .env.prod
+           
           
